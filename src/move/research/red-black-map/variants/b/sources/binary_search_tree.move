@@ -33,6 +33,42 @@ module red_black_map::binary_search_tree {
         pragma verify = true;
     }
 
+    spec fun sub_tree(tree: Map, root: u64, direction: u64): u64 {
+        if root == NIL {
+            NIL
+        } else {
+            tree.nodes[root].children[direction]
+        }
+    }
+
+    spec fun tree_nodes(self: Map, root: u64): vector<u64> {
+     if (cur_idx == NIL) {
+         vector[]
+     } else {
+         concat(vector[cur_idx], concat(tree_nodes(self, sub_tree(self, root, LEFT)), tree_nodes(self, sub_tree(self, root, RIGHT))))
+     }
+    }
+
+    spec fun value(map: Map, root: u64): u32 {
+        map.nodes[root].key
+    }
+
+    spec fun is_bst(map: Map, cur_idx: u64): bool {
+      (forall idx: u64 where vector::spec_contains(tree_nodes(map, sub_tree(map, cur_idx, LEFT)), idx): 
+      value(map, cur_idx) > value(map, idx)) &&
+  (forall idx: u64 where vector::spec_contains(tree_nodes(map, sub_tree(map, cur_idx, RIGHT)), idx): value(map, cur_idx) < value(map, idx)) &&
+is_bst(map, sub_tree(map, cur_idx, LEFT)) && is_bst(map, sub_tree(map, cur_idx, RIGHT))
+    }
+
+    spec fun tset(self: Map, cur_idx: u64): vector<u64> {
+     if (cur_idx == NIL) {
+         vector[]
+     } else {
+         concat(vector[cur_idx], concat(tset(self, self.nodes[cur_idx].children[LEFT]), tset(self, self.nodes[cur_idx].children[RIGHT])))
+     }
+    }
+
+
     spec Map {
         invariant len(nodes) < NIL;
         invariant root == NIL <==> len(nodes) == 0;
@@ -75,14 +111,6 @@ module red_black_map::binary_search_tree {
         ensures len(tset(result, result.root)) == 0;
     }
 
-    spec fun tset(self: Map, cur_idx: u64): vector<u32> {
-     if (cur_idx == NIL) {
-         vector[]
-     } else {
-         concat(vector[self.nodes[cur_idx].key], concat(tset(self, self.nodes[cur_idx].children[LEFT]), tset(self, self.nodes[cur_idx].children[RIGHT])))
-     }
-    }
-
     spec fun contains(self: Map, cur_idx: u64, key: u32): bool {
      if (cur_idx == NIL) {
          false
@@ -105,11 +133,7 @@ module red_black_map::binary_search_tree {
      }
     }
 
-    spec fun is_bst(map: Map, cur_idx: u64): bool {
-      (forall idx: u64 where vector::spec_contains(tset(map, map.nodes[cur_idx].children[LEFT]), idx): map.nodes[cur_idx].key > map.nodes[idx].key) &&
-  (forall idx: u64 where vector::spec_contains(tset(map, map.nodes[cur_idx].children[RIGHT]), idx): map.nodes[cur_idx].key < map.nodes[idx].key) &&
-is_bst(map, map.nodes[cur_idx].children[LEFT]) && is_bst(map, map.nodes[cur_idx].children[RIGHT])
-    }
+
 
 
     public fun add(self: &mut Map, key: u32) {
@@ -132,7 +156,11 @@ is_bst(map, map.nodes[cur_idx].children[LEFT]) && is_bst(map, map.nodes[cur_idx]
                     parent: parent_index,
                     children: vector[NIL, NIL]
                 }
-            );            
+            ); 
+            spec {
+                assert self.root != NIL;
+                assert vector::spec_contains(tset(self, self.root), self.root);
+            };           
             return
         };
 
